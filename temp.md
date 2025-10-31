@@ -1,277 +1,181 @@
-# java-racingcar-precourse
+# STUDY_NOTE
+미션을 진행하면서 설계나 구현 등을 위해 학습했으나, README에 적기에는 과하다고 생각되는 내용들을 작성하는 문서입니다.
 
-## 프로젝트 구조
-```markdown
-src/main/java
-└── racingcar
-  ├── Application.java
-  ├── domain
-  │   ├── Car.java
-  │   └── RacingGame.java
-  ├── exception
-  │   └── ErrorMessage.java
-  ├── numbergenerator
-  │   ├── NumberGenerator.java
-  │   └── RandomNumberGenerator.java
-  ├── separator
-  │   └── CarNameSeparator.java
-  └── view
-       ├── InputView.java
-       └── OutputView.java
-```
+학습에 대한 레퍼런스는 각 주제별로 제목 바로 밑에 작성합니다.
 
-## 클래스 다이어그램
-![class-diagram](./assets/racingcar-class-diagram.png)
+## 1. IntStream의 range와 rangeClosed
+1부터 45까지의 로또 번호를 미리 만들어 두고 캐싱하는 전략을 선택했는데, 이 과정에서 캐싱을 위한 `new HashMap<Integer, LottoNumber>` 인스턴스를 생성하는 시점에
+1~45의 번호를 미리 넣어 두기 위해 stream 연산을 해야 된다(당연하게도 생성자에 시점에 `for ...` 연산을 전달할 수 없기 때문이다 대신 stream은 넣을 수 있다).
 
-위 그림은 IntelliJ의 Show Diagram 기능을 이용해서 생성 후, 일부 수정을 거쳤습니다. 사용 방식은 아래를 참조하세요.
+이때 `IntStream`의 존재 자체는 알고 있는 상태여서 이를 활용하고자 API를 확인해 봤는데 내가 쓸 만한 메서드는 `range`와 `rangeClosed`로 좁혀졌다.
 
-![intellij-show-diagram](./assets/intellij-show-diagram.png)
+그런데 메서드명만 보고는 둘의 차이가 뭐고, 어떤 메서드를 선택해야 할 지 모르겠어서 문서와 함께 내부 구현을 살펴봤다.
 
-## 구현할 기능 목록
-> [!NOTE]
-> 구현할 기능 목록에 대해서 각 객체별로 구분합니다.
-> 
-> 기본적으로 `### CarNameSeparator`와 같이 클래스명을 소제목으로 해서 해당 객체의 책임이 되는 기능 리스트를 작성합니다.
-> 
-> 아직 어떤 객체의 책임인지 확실히 정해지지 않은 기능에 대해서는 `정해지지 않음` 소제목으로 분류합니다.
+문서가 너무 잘 적혀 있어서 내 설명을 듣는 것보다는 직접 확인해보는 것을 추천한다.
+그래도 결론을 말하자면, `range`는 끝 값을 포함하지 않고(exclusive), `rangeClosed`는 끝 값을 포함(inclusive)한다.
 
-**용어 설명**
-- 여기서 언급되는 `예외`는 모두 `IllegalArgumentException`이다.
-- `검증`이란 리턴 타입이 `void`이고, 검증 성공시 정상 로직이 진행되며 실패시 `예외`를 발생시키는 메서드로 구현된다.
-- `판단`이란 리턴 타입이 `boolean`이고, 조건에 대한 참 거짓을 리턴하는 메서드로 구현된다. 
-
-### CarNameSeparator
-- [x] 쉼표(`,`)를 기준으로 구분된 자동차 이름들의 문자열을 분리한다.
-- [x] 분리된 각 요소의 앞 또는 뒤에 공백이 있다면 이를 제거한다.
-  - 예. `" pobi , woni "`는 `[" pobi ", " woni "]`가 아니라, `["pobi", "woni"]`가 된다.
-
-### Car
-- [x] 자동차 이름에 사용할 수 있는 문자는 영문 대소문자와 ~~한글,~~ 숫자, 스페이스 문자 하나(`" "`), 언더 스코어(`"_"`) 하나만 가능하다. 이를 위반한 이름에 대해 `사용할 수 없는 이름` 또는 `invalid name`이라 하자. 해당 조건을 검증하고, 위반 시 `예외`를 발생시킨다.
-  - 한글을 제외한 이유: [여기](https://helia-17.tistory.com/16)를 확인해 보니, 한글에 대한 정규표현식을 사용하려면 단순히 패턴을 정의하는 것뿐만 아니라 맥과 윈도우의 인코딩 차이도 고려해야 된다. 이 부분에 시간을 꽤 써야될 것 같아 일단 보류.
-- [x] 자동차 이름이 5자 이하인지 `검증`한다. 5자를 초과하면 `예외`를 발생시킨다.
-- [x] ~~0에서 9 사이의 무작위 값을 구해~~값이 4 이상이면 전진한다. 아니라면 정지한다.
-  - '조건에 따른 전진'이라는 책임을 `RacingGame`과 `Car` 중에 누가 가져야 하는가에 대한 의문이 생겼다. 결론적으로 '전진'이라는 추상적 책임을 `Car`가 가지는 것이 적절하므로, 해당 책임 역시 `Car`가 가지도록 한다.
-  - (중요!) 하지만 '무작위 값을 구하는 책임'까지 지우면 그 기능을 테스트하기 어렵다(랜덤 값에 의존하기 때문이다). 따라서 무작위 값 생성 자체는 외부(`RacingGame`)에서 주입하도록 하는 것의 테스트 작성에 용이하다.
-
-### RacingGame
-- [x] 정상적인 입력에 대해 게임을 성공적으로 생성할 수 있다.
-- [x] 경주에 참가할 자동차 이름과 시도할 횟수를 입력 받는다.
-- [x] 게임을 시작할 수 있는지 검증한다.
-  - [x] 참가할 자동차가 2개 미만이라면, 게임을 시작할 수 없다. 위반시 `예외`를 발생시킨다.
-  - [x] 게임에 참가하는 자동차들은 이름이 서로 동일할 수 없다. 즉, 중복이 존재하면 안 된다. 중복이 존재하면 `예외`를 발생시킨다.
-    - 이 기능에 대한 책임을 가지는 객체를 정하기가 고민됐는데, 일단 `CarNameSeparator`는 단순히 '분리'의 책임만을 가지면 되기 때문에 중복 불가라는 제한을 가지기에는 애매하다고 판단했다.
-  - [x] 게임은 최소 1회차 진행되어야 한다.
-    - 즉, `시도할 횟수`가 ~~입력되지 않거나~~ `1` 미만이라면 `예외`를 발생시킨다. 
-- [x] 게임을 진행하면서 각 회차의 결과를 출력한다. -> `OutputView`에게 요청
-- [x] 게임이 끝나면 우승자를 출력한다. -> `OutputView`에게 요청
-
-### 정해지지 않음
-_nothing_
-
-## 설계
-> [!NOTE]
-> 
-> 해당 섹션은 `문제 파악하기 섹션`을 진행한 이후에 작성됩니다.
-> 
-> `문제 파악하기 섹션`에서는 문제를 파악하는 수준에서 할 수 있는 간단한 설계를 했다면,
-> 해당 섹션에는 책임에 대한 객체, 변수명, 메서드명 등 더 세부적인 내용들을 고려한 좀 더 고차원적인 설계를 합니다.
-
-### 1. 초기 구상
-![설계](https://github.com/user-attachments/assets/2f3d6632-ed85-4e94-8742-b891747292c1)
-
-### 2. `RacingGame` 객체
-![RacingGame-객체-설계](https://github.com/user-attachments/assets/758ee143-4490-4b2a-98c9-2a8ec7b37c15)
-
-### 3. 외부로 공개되지 않는 기능을 테스트하는 방법을 고민
-![외부로-공개되지-않는-기능에-대한-테스트-설계](https://github.com/user-attachments/assets/b7d5be0c-3f49-49b7-b2ca-aff33ba1b6c2)
-
-### 4. '게임 시작'에 대한 메서드명이 적절한지 고민
-![게임-시작에-대한-메서드명-설계](https://github.com/user-attachments/assets/252ed4b6-d677-4c25-88b3-87b0084dd044)
-
-### 5. RacingGame의 start 메서드 내부에서 각 라운드를 진행하고, 결과를 출력하는 흐름
-![RacingGame-start-내부-구상](https://github.com/user-attachments/assets/947aa5eb-9da4-42b3-b21f-d31437e4ace1)
-
-콘솔 출력에 대한 테스트는 [여기](https://www.geeksforgeeks.org/advance-java/unit-testing-of-system-out-println-with-junit/)에서 소개하는 방법으로 하면 되겠다.
-
-### 6. 랜덤 값에 의존하지 않고 테스트 하려면
-다른 구현들을 대부분 마치고 RacingGame이 각 회차의 결과와 최종 우승자를 출력하는 요구 사항에 대한 구현이 남은 상태다.
-
-그런데 결국 실제 `RacingGame.start` 메서드는 랜덤 값에 의존하기 때문에 테스트 일관성이 보장되지 않는다.
-
-이런 상황에서 mock이나 stub을 쓴다고 주워 듣기는 했는데, 정확한 해결 방안은 모르기 때문에 일단 이에 대한 학습을 먼저 진행한다.
-
-**결론:** 결국 외부 API를 통해 랜덤 값을 생성하는 로직이 문제다.
-그렇다면, 테스트 때는 랜덤성에 의존하지 않을 수 있도록 해당 로직에 대한 '대체 가능성'을 부여해주면 된다.
-가장 간편하고 안전한 방법은 생성자 주입이다.
-
-테스트에서는 경계값 등을 테스트 하면 되므로, 랜덤이 아니라 지정한 고정 숫자를 생성하는 `FixedNumberGenerator`를 만든다.
-
-또한 대체 가능성을 위해서는 상위 부모 타입(인터페이스 포함)을 가져야 되는데, 미션에서 제공되는 `Randoms` 라이브러리는 인스턴스 생성이 불가능하므로 이를 래핑하는 `RandomNumberGenerator`를 만든다.
-
-`XxxNumberGenerator`는 `NumberGenerator` 인터페이스의 구현체이다.
-
-### 7. Console 라이브러리에 대한 래핑
-'외부 라이브러리는 래핑해서 사용하는 것이 좋다' 정도로만 막연히 알고 있었다.
-
-1주 차 미션에서는 위 사실을 알고 있었으나, 필요성이 느껴지지 않는 상태에서 무작정 래핑하는 것은 오히려 학습에 악영향을 미칠 수도 있겠다 생각하여
-그대로 사용했었다.
-
-그런데 고맙게도 이번 2주 차 미션에서 그 필요성이 생겼다! 아마도 의도된 것이 아닐까... 하는데, 개인적으로 문제에서 특히나 잘 의도된 부분이라고 생각한다.
-
-거두절미 하고, 그 필요성은 다음과 같다.
+즉, 내 경우에는 `rangeClosed(1, 45)`를 호출하면 되겠다.
 
 ```java
-String line = Console.readLine(); // 문자열은 그냥 받으면 된다.
-int intLine = Integer.parseInt(Console.readLine()); // 숫자형으로 받으려면 타입 변환이 요구된다.
+// 수학 표현에서 '('와 ')'를 inclusive, '['와 ']'를 exclusive로 사용하기도 한다.
+// 정수만 고려한다고 했을 때 (1, 5)는 2, 3, 4를, (1, 5]는 2, 3, 4, 5를 의미한다.
+
+// `range`는 endExclusive를 가진다. 다음 for 문과 순서가 동등하다: for (int i = startInclusive; i < endExclusive ; i++) { ... }
+public static IntStream range(int startInclusive, int endExclusive) {
+    if (startInclusive >= endExclusive) {
+        return empty();
+    } else {
+        return StreamSupport.intStream(
+                new Streams.RangeIntSpliterator(startInclusive, endExclusive, false), false);
+    }
+}
+
+// `rangeClosed`는 endInclusive를 가진다. 다음 for 문과 순서가 동등하다: for (int i = startInclusive; i <= endInclusive ; i++) { ... }
+public static IntStream rangeClosed(int startInclusive, int endInclusive) {
+    if (startInclusive > endInclusive) {
+        return empty();
+    } else {
+        return StreamSupport.intStream(
+                new Streams.RangeIntSpliterator(startInclusive, endInclusive, true), false);
+    }
+}
 ```
-위 상황처럼 숫자형으로 받아야 할 필요가 있을 때 다음 두 가지 해결책을 생각할 수 있다.
-1. `Application`에서는 타입 변환에 신경쓰지 않도록, 그냥 `Console.readLine()`으로만 받고, `RacingGame`에서 `String`으로 받은 숫자형 문자열을 숫자로 변환해서 사용한다.
-2. `Application`에서 타입 변환까지 신경써서, `RacingGame`은 받은 값 그대로 사용한다.
 
-그런데 내 생각에 1번은 입력한 값에 대한 타입(문자열)이 실제로 기대되는 값(숫자형)과 매칭되지 않는 문제가 있다.
+## 2. 인스턴스를 캐싱해서 사용하는 객체의 equals 재정의
+reference: [이펙티브 자바 - 조슈아 블로크](https://product.kyobobook.co.kr/detail/S000001033066): 아이템10~11
 
-그리고 2번은 `Application`은 '사용자로부터 입력을 받는 것'만 신경쓰면 되지, 굳이 타입 변환까지 신경써야 되나? 싶은 문제가 있다.
+이펙티브 자바의 목차를 읽으면서 미션에 적용할 만한 주제에 대해 학습한 뒤 사용하고 있다.
 
-여기서 `Console.readLineAsInt()` 또는 `Console.readInt()`처럼 숫자형 문자열을 받는다는 의미가 명확한 기능에 대한 필요성을 느꼈다.
+그 중 `equals`와 `hashCode`를 재정의 하라는 주제가 있는데, 내가 구현한 `LottoNumber` 클래스는 내부적으로 인스턴스를 캐싱 후 사용하기 때문에,
+기본적으로 `==`을 사용한 identity 비교를 하더라도 로또 번호가 같기만 하면 같은 객체로 판단할 수 있다.
 
-그런데 `Console` API 자체는 외부 라이브러리이기 때문에, 우리가 직접 기능을 추가하기 어렵다. 대신 이를 래핑하는 객체를 만들면 된다!!!
+그래서 "`equals`를 재정의 하지 않아도 의도대로 동작하는데, 굳이 재정의 할 필요가 있을까?"하는 의문이 들었다.
 
-예를 들어, `MyConsole`을 직접 구현하는데, `MyConsole.readLine()`은 `Console` API를 그대로 호출하는 프록시로 동작하게끔 하고,
-`MyConsole.readLineAsInt` 역시 타입 변환에 대한 추가 처리를 하고, `Console` API를 호출하도록 하면 된다.
+결론은 "**그래도 재정의 해야 한다!**"로 내렸다. 근거는 다음과 같다.
 
-해당 주차 미션에서 `Randoms` API는 이미 `NumberGenerator`로 래핑해서 사용했는데, 그때는 '테스트 용이성'을 위해서 래핑을 생각해냈다.
+내가 요구 사항으로 정의한 "로또 번호가 같으면 동일한 객체로 판단한다."에 대한 구현은 `equals` 재정의 또는 (기존처럼) 인스턴스 캐싱 등으로 할 수 있는데,
+결국 '구현에 의존'하여 특정 구현(인스턴스 캐싱)에서만 해당 요구 사항이 만족되는 상황이다.
 
-그런데 `Console`의 경우에는 '기능의 확장'을 위해서 래핑을 진행했고, [이 블로그](https://full-of-bluff.tistory.com/19)로부터 힌트를 얻을 수 있었다.
+따라서 구현에 의존하지 않음과 이펙티브 자바에서 소개하는, 자바를 잘 쓰는 방법(정확히 뭐라고 표현해야 할 지 모르겠다)을 고려하여 `equals`를 재정의 해 두는 것이 적절하겠다.
 
-래핑이라는 동일한(?) 행위지만, 그 목적과 필요가 다르다는 점이 "나는 정말 필요에 의해서 새로운 방법을 학습하고 있어!"라는 자신감을 내게 주어 특히나 좋았던 부분이다.
+기존에 알고 있던 `equals` 표준 정의 방식은 다음과 같다.
+```java
+if (anObject == null || getClass() != anObject.getClass()) {
+    return false;
+}
 
-### 8. Console.close()를 호출해줘야 할까?
-미션에서 제공되는 `Console` API는 `Scanner`를 닫는 `close()`를 제공한다.
+LottoNumber aLottoNumber = (LottoNumber) anObject;
 
-1주 차에도 이 사실은 인지하고 있었으나, 그 판단을 뒤로 미루다가 결국 결정하지 못하고 호출하지 않게 되었는데 2주 차에는 다음과 같은 이유로 '닫을 필요 없다'는 결론을 내리기로 한다.
+return number == aLottoNumber.number;
+```
 
-(이전에도 어렴풋이 Scanner는 반납할 필요가 없다는 것을 어디선가 들어서 알고는 있었지만) 근거를 기반으로 한 결론을 내리기 위해 [여러 자료들](#References)을 찾아봤다.
+그런데 이펙티브 자바와 자바의 `String.equals` 구현을 보니 개선할 여지가 보여서 다음과 같이 개선한다.
+```java
+// 주의: instanceof를 사용한 pattern matching은 Java16+가 요구된다.
+@Override
+public boolean equals(Object anObject) {
+    if (this == anObject) {
+        return true;
+    }
 
+    return (anObject instanceof LottoNumber aLottoNumber)
+            && (number == aLottoNumber.number);
+}
+```
 
-## 문제 파악하기
-> [!NOTE]
-> 
-> 해당 섹션은 문제를 분석하고 `구현할 기능 목록`을 만들기 이전 시점에 작성됩니다.
-> 
-> 문제에 대한 본격적인 분석 전, 간단하게 '문제를 파악'하는 정도로만 훑어보며 의문 사항이나 문제 흐름을 정리하는 것이 목적입니다.
-> 
-> 기본적으로 '구현할 기능 목록을 만들기 전' 시점에 작성되지만, 필요에 따라 그 이후 시점에도 내용이 추가될 수 있습니다.
+## 3. Javadoc
+출처: 
+- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html#s7-javadoc)
+- https://www.baeldung.com/javadoc
+- 이펙티브 자바: 아이템 56, 아이템 74
 
-### 의문 사항
-#### 1. '전진'의 단위는?
-구한 무작위 값이 4 이상이면 전진하는 것은 알겠는데, 다음 두 경우 중 무엇일까?
-- 경우1: 무조건 한 칸
-- ~~경우2: 숫자 크기만큼(4 ~ 9)~~
+내용이 짧고, 간단하고, 명확해서 자세히 정리할 필요는 없어 보인다. 미션을 진행하면서 필요한 내용을 학습하고 즉시 적용하기로 한다.
 
-결론적으로 `경우1`로 판단한다. 근거는 다음과 같다.
-- 주어진 `ApplicationTest`의 `기능_테스트` 메서드를 보자.
-  - pobi는 4, woni는 3일 때 pobi에게 한 칸의 `-`가 주어졌다.
-  - "4를 한 칸 전진 기준으로 하고, 수가 1만큼 더 커질 때마다 1칸 더 전진하는 로직일 수도 있지 않냐?"라고 반문 할 수 있다.
-    - 하지만 이는 너무 비약적인 논리다. 이렇게 판단할 근거는 없다. 다른 근거가 더 추가되지 않는 이상 현재 판단을 유지하는 것이 타당하다.
+### Google Java Style Guide
+- 첫 paragraph를 제외하고는 `<p>`태그로 시작한다. 태그와 첫 글자 사이에는 공백을 두지 않는다.
+- Block tags는 `@param`, `@return`, `@throws`, `@deprecated` 순서로 쓴다.
+  - 반드시 설명과 함께 해야 한다. 블록 태그만 단독으로 사용하지 않는다.
+  - 설명은 블록 태그에서 공백(스페이스)을 한 칸 주고 같은 줄에 적는 것으로 시작한다. 만약 줄이 부족하면 다음 줄로 이동하고, 4spaces 이상 띄워서 이어 작성한다.
+  - 블록 태그 즉, `@`이 등장하는 라인 기준으로 그 위 라인은 한 줄 띄운다(비운다).
+- `@Override` 메서드를 구현하는 경우에는 그 상위 메서드에서 이미 javadoc이 구현되었다면, 굳이 재정의 메서드에서는 작성하지 않아도 된다.
+  - `toString`, `equals` 등
 
-즉, 초기에는 각 자동차가 빈 문자열로 각각 시작하고 / 전진했다면 이전 상태 + 한 칸 / 정지했다면 이전 상태로 해서 출력하는 논리로 보인다.
+### 이펙티브 자바
+- 상속용으로 설계된 클래스의 메서드가 아니라면 (그 메서드가 어떻게 동작하는지가 아니라) 무엇을 하는지를 기술해야 한다. 즉, how가 아닌 what을 기술해야 한다.
+- (코딩 표준에 따라서 다름) @return 태그의 설명이 메서드 설명과 같을 때 @return 태그를 생략해도 좋다.
+  - 즉, 메서드 설명에서 리턴을 포함한 전반적인 what 설명을 하는 것이 우선적
+- 다음 상황에서 상한/하한 값은 `private`이니 javadoc에 추가하지 않아야 한다. 대신 리터럴로 작성한다.  
+  리터럴 값이 바뀐다는 것은 API 스펙 자체의 변화를 의미하기에 당연히 Javadoc도 바뀌어야 함을 의미하기 때문에 리터럴로 적어도 좋다.
+  ```java
+  public final class LottoNumber {
+    private static final int LOWER_RANGE_INCLUSIVE = 1;
+    private static final int UPPER_RANGE_INCLUSIVE = 45;
+  
+      /**
+     * 인자로 받은 number에 대응되는 LottoNumber 객체를 리턴한다.
+     *
+     * @param number 로또 번호; 1 이상이고 45 이하여야 한다.
+     * @throws IllegalArgumentException number가 범위를 벗어나면,
+     *         즉, ({@code number < 1 || number > 45})이면 발생한다.
+     */
+    public static LottoNumber valueOf(int number) {
+        if (UPPER_RANGE_INCLUSIVE < number || number < LOWER_RANGE_INCLUSIVE) {
+            throw new IllegalArgumentException(ErrorMessage.LOTTO_NUMBER_OUT_OF_RANGE.build(number));
+        }
 
-#### 2. "전진하는 자동차를 출력할 때..."라는 요구사항
-처음에는 해당 요구 사항이 '전진하는(4 이상이 나온) 자동차의 상태만 출력하라'는 것인 줄 알았으나 아니다.
+        return CACHE.get(number);
+    }
+  ```
+- 문서화 주석의 첫 문장의 첫 번째 마침표(`.`)가 나오는 부분에서 끊긴다. 이를 방지하려면 `{@literal}`로 감싸준다.
+  - 예를 들어 "머스터드 대령이나 Mrs. 피콕 같은 용의자." 대신 "머스터드 대령이나 {@literal Mrs.} 피콕 같은 용의자."로 작성함이 적절하다.
+  - (Java 10+) {@summary 머스터드 대령이나 Mrs. 피콕 같은 용의자.}처럼 요약 설명 전용 태그를 사용할 수 있다.
 
-그냥 각 회차의 자동차들 상태(총 이동 거리)를 출력하면 된다. 근거는 다음과 같다.
-- '실행 결과 예시'에서 첫 회차의 결과를 보면 woni는 전진하지 않았는데 출력에 포함된다.
+### 자바 표준 라이브러리 참고
+- 클래스, 인터페이스 레벨의 javadoc은 javadoc의 마지막 부분(`*/`)과 클래스, 인터페이스 헤더 사이에 한 줄을 비운다.
+  - 메서드의 경우는 javadoc과 메서드 헤더 부분 사이를 붙인다. 즉, 빈 줄을 두지 않는다.
 
-#### 3. 실행 결과는 한 번에 출력할까? 아니면 실시간으로 출력할까?
-두 방법 중 자율적으로 선택하면 될 줄 알았으나, 실시간으로 출력하는 것으로 판단한다. 생각의 흐름은 다음과 같다.
-- 출력과 관련하여 "...요구 사항에 명시된 출력 형식을 따르지 않으면 0점을 받게 된다."는 명시가 있다.
-- 만약 한 번에 출력하는 것으로 구현한다고 할 때, 사용자가 매우 큰 이동 횟수를 입력해서 최종 출력까지 30초가 걸린다고 가정하자.
-  - 이때 사용자는 30초 동안 프로그램이 제대로 진행 중인 것인지, 렉이 걸려 먹통인 것인지 알 수가 없다. 이는 사용자에게 최악의 경험을 준다.
-  - 결과 자체는 최종적으로 출력하더라도 'n회차 진행중...'이라는 진행 사항 정도만 띄워주도록 해서 이 경험을 개선할 수 있지만, 출력 요구 사항을 준수해야 되기 떄문에 제한된다.
+### 상수값 링크로 가져오기
+원래 전체 패키지 경로 안 적고도 되는 것 같은데, 일단 나는 실패했다.
 
-### 프로그램에 등장하는 요소
-- 자동차
-  - 자동차는 이름을 가진다(5자 이하로 제한).
-  - 자동차는 이동한 거리를 가진다.
-  - 자동차는 전진 여부를 결정하기 위해 무작위 값을 정할 수 있다.
+```java
+{@value lotto.constant.LottoConstant#LOTTO_PRICE}
+```
 
-- 우승자
-  - 우승자는 자동차들 중 최종적으로 이동한 거리가 가장 큰 자동차(들)이다. 여러 명이 우승할 수 있다.
+## 4. Unchecked Exception은 javadoc에 기술하면 절대 안 될까?
+출처:
+  - 이펙티브 자바: 아이템49, 아이템56, 아이템74
+  - [How do you document unchecked exceptions?](https://stackoverflow.com/questions/3746884/how-do-you-document-unchecked-exceptions)
+  - [Avoid @throws in javadoc](http://www.javapractices.com/topic/TopicAction.do?Id=171)
 
-- 시도할 횟수
+~~이펙티브 자바에서는 Unchecked Exception인 경우, 즉 메서드나 클래스 선언부에서 `throws`로 던지는 체크 예외가 아닌 경우는 javadoc에 `@throws`로 설명하지 말라고 한다.~~
 
-#### 객체 지향 세계로의 매핑을 고민
-`시도할 횟수`만큼 내부 로직을 반복해야 하므로 해당 값을 변수로 관리하기로 결정한다.
+~~만약 발생할 수 있는 Unchecked Exception에 대한 설명을 적고 싶다면 `@throws`가 아니라, `@param` 등에 적으라고 한다.~~
 
-그렇다면, **어떤 객체가 관리**해야 될까?
-- ~~자동차~~
-  - `시도할 횟수`는 모든 자동차가 그 값조차 동일하게 가진다. 따라서 개별 자동차 객체가 가져야 될 속성은 아니다.
-  - 모든 자동차가 값을 공유하기는 하지만, 자동차 자체에 대한 속성도 아니다. 따라서 자동차 클래스가 `static`으로 가져야 될 속성도 아니다.
-- 레이싱 진행자 (객체의 임시 명칭)
-  - 해당 프로그램은 결국 '레이싱 게임'에 대한 구현이 핵심이다. 레이싱 게임은 `시도할 횟수`만큼 차수를 진행한다. 즉, 레이싱 게임의 진행과 관련된 값으로 구분할 수 있고 레이싱 진행자가 관리하는 것이 적절하다.
-  - 또한 레이싱 진행자가 레이싱에 참가하는 자동차 인스턴스들도 관리하는 것이 좋겠다.
-  - 각 자동차 인스턴스에 대한 차수별 실행 결과와 최종 이동 거리를 비교해서 우승자를 가리는 것도 해당 객체가 책임진다.
-    - '출력'에 대한 것은 필요한 값을 전달 받아 출력하는 별도의 객체가 책임지는 것이 적절할 수도 있겠으나, 일단은 이 정도로만 고민한다.
+~~발생할 수 있는 런타임 예외는 코드를 잘 짜서 다 잡아서 처리할 수 있도록 하라는 의도같다.~~
 
-### 사용자와 Application 접점
-사용자는 `Application`에게 쉼표로 구분한 자동차 이름과 시도할 횟수를 전달한다. 이에 대해 프로그램이 차수별 실행 결과와 최종 우승자를 콘솔에 출력해주는 것을 기대한다.
+~~그런데 경우에 따라 "그렇게 빡빡하게 굴지 말고, 중요하다고 생각된다면 Unchecked Exception라도 `@throws`에 적어라!"라고 주장하는 이들도 꽤 있다. 판단 기준을 정해두고 팀마다 유연하게 결정해도 되겠다.~~
 
-즉, 내부적으로 어떤 로직으로 진행해야 하는지는 사용자가 신경쓰지 않는다.
+~~또한 해당 이번 미션에서도 "사용자가 잘못된 값을 입력한 경우 `IllegalArgumentException`을 발생시키고, ... 에러 메시지 출력 후 그 부분부터 입력을 다시 받는다."라는 요구 사항이 있는데 '잡아서 처리하라'는 요구로 보인다.~~
 
-### 프로그램 흐름도
-일단 개별 객체로 구분하지 않고, 크게 사용자와 프로그램 둘로만 나누어서 프로그램의 흐름을 작성했다.
+~~결론: Unchecked Exception(예를 들어 `LottoNumber.valueOf`에서의 `IllegalArgumentException`)은 잡아서 잘 처리하고, javadoc의 `@throws`에는 적지 말자!~~
 
-![프로그램-흐름도](https://github.com/user-attachments/assets/e668402a-f304-4474-8d07-a18d703d96b7)
+잠깐 정신이 나갔었나 보다...! 책 내용을 완전히 잘못 이해하고 있었다. 이제라도 깨달아서 다행이다.
 
-## 2주 차 목표
-> [!NOTE]
-> 
-> 해당 섹션은 1주 차를 진행하면서/마치고 느낀 아쉬운 부분들을 2주 차에는 놓치지 않기 위해서 리마인드 하기 위함입니다.
+(이펙티브 자바에서 제시하는 내용들이 꽤나 고급 내용이고, 내가 시도해보지 않았던 것들 투성이라 머리에 과부하가 왔나 보다.. ㅠㅠ. 그런데 이렇게 이전보다 훨씬 개선된 작업을 하고 있다는게 너무 재밌다.)
 
-### 스스로 느낀 부분
-- [x] JUnit이 제공하는 `@ParamterizedTest` 애노테이션 사용하기
-  - 테스트 메서드 하나에 비슷한 여러 케이스를 넣고 싶을 때, 메서드 바디 부분을 더럽히지 않고 추가할 수 있다.
-  - `@CsvSource`는 `String`에 특화되어 있고, `@ValueSource`는 추가로 숫자 타입 정도까지 커버가 가능하다. 만약 `List` 등의 참조형 객체가 필요하다면 `@MethodSource`가 적절하다.
-- [x] 학습 레퍼런스 남기기
-- [x] 코드 컨벤션을 지키기 위해 extension 등을 이용하기
-  - [woowacourse-docs 리포지토리](https://github.com/woowacourse/woowacourse-docs/tree/main/styleguide/java)를 참고해서 로컬 인텔리제이에 코드 포매터를 적용했다.
-- ~~테스트 메서드명에 snake_case 사용하지 않기~~
-  - [Java Style Guide](https://google.github.io/styleguide/javaguide.html#s5.2.3-method-names)에서 테스트 메서드명에서는 lowerCamelCase와 함께 언더 스코어(`_`)의 사용을 허용하고 있음을 확인했다.
-  - [x] 대신 `methodName_expectedBehavior_stateUnderTest` 구조로 네이밍하기로 한다.
+책에서 말한 진짜 내용은 "발생할 수 있는 (언체크 포함) 모든 예외는 `@throws`로 기술하되, 메서드 선언부에서의 `throws ...`에는 넣지 말라"라는 것이었다!!!
 
-### 공통 피드백 참고
-- [x] 배열 대신 컬렉션 사용하기
-  - 1주 차에서 리팩터링을 통해 대부분의 배열을 컬렉션으로 변경했으나, 변경하지 못한 부분이 있었다.
-- 커밋 메시지에 대해서
-  - [x] 제목은 명령조로 작성, 마침표(.) 금지
-    - 한글 명령조로 작성하려면 '~한다', '~함' 등으로 하면 되겠다.
-    - '~ 변경', '~추가'와 같은 명사형이나 '~추가했다'와 같은 과거형은 지양한다.
-  - [x] 본문은 '어떻게'보다 '무엇을', '왜'에 맞춰 작성하기
-- [ ] 어려운 부분이 있다면, 테코톡에서 다룬 영상이 있는지 우선적으로 확인하기
+'언체크 예외를 메서드 선언부 `throws`에 사용하는 방식'에 대해서는 [내가 작성했던 글: 언체크 예외에 대한 명시적 throws 선언시 예외 타입에 의한 컴파일 에러 발생](https://hyoyoonnam.github.io/posts/throw-runtime-exception-with-throws-Exception/)을 참고해도 좋다.
 
-### PR 리뷰 참고
-- [x] [예외를 남길 땐 단순 메시지 뿐만 아니라, 문제가 발생한 값도 포함해주기](https://github.com/woowacourse-precourse/java-calculator-8/pull/530/files/802c242348735f9ea082658ea90654576ea8525f#r2448583808)
-- [ ] [null 체크가 필요하다면, Objects.requireNonNull을 사용하고, 예외는 래핑하기](https://github.com/woowacourse-precourse/java-calculator-8/pull/113#discussion_r2450380973)
+## 5. 개행을 위한 "\n"과 System.lineSeparator()
+출처:
+- [System.out.println()을 테스트 하는 방법](https://www.geeksforgeeks.org/advance-java/unit-testing-of-system-out-println-with-junit/)
+- [JAVA 줄바꿈 대하여: 출력 개행에 \n을 쓰면 안된다고??](https://engineerinsight.tistory.com/14)
 
-## References
-[JUnit Parameterized Tests](https://www.baeldung.com/parameterized-tests-junit-5)
+2주 차 때 `System.out.println()`에 대한 테스트를 하는 방법을 찾던 중, `System.lineSeparator()`라는 녀석을 보았다.
 
-[Unit Test Naming Conventions](https://medium.com/@stefanovskyi/unit-test-naming-conventions-dd9208eadbea)
+당시에는 그냥 단순히 "`\n` 리터럴 대신 명확한 이름으로 쓰기 위함인가?" 정도로만 생각하고 넘어 갔는데, 이번 3주 차에서 추가로 서칭을 해보니 그 원리를 더 알고 사용하는 것이 적절하다고 생각해서 학습을 진행한다.
 
-[Pattern, Matcher 클래스](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html)
+우리가 무심코 사용하던 `System.out.println()`가 내부적으로 어떻게 개행을 처리하는지 결국 내부 구현을 따라가다 보면 알 수 있는데, 그 흐름을 아래와 같이 하나의 사진으로 정리해봤다.
 
-[프론트엔드의 한글 정규식, 어떻게 쓸 것인가](https://helia-17.tistory.com/16)
-
-[좋은 코드를 위한 자바 변수명 네이밍 - 변수 이름에 자료형이 들어간다면?](https://tecoble.techcourse.co.kr/post/2020-04-24-variable_naming/)
-
-[코딩 명명 규칙 시 주의해야 할 영어 단어](https://blog.naver.com/posionsnake/222146800990)
-
-[Unit Testing of System.out.println() with JUnit](https://www.geeksforgeeks.org/advance-java/unit-testing-of-system-out-println-with-junit/)
-
-[import static과 import 순서](https://arc.net/e/BC3ED568-BD92-46C3-AC6C-DCDD160B687C)
-
-**Scanner를 닫아야 되는지에 대한 여러 의견들**
-- [In which case should I use System.in.close()?](https://stackoverflow.com/questions/55264878/in-which-case-should-i-use-system-in-close)
-- [Close a Scanner linked to System.in](https://stackoverflow.com/questions/14142853/close-a-scanner-linked-to-system-in)
-- [What if I do not close the Scanner?](https://stackoverflow.com/questions/25790294/what-if-i-do-not-close-the-scanner)
-- [자바신공 04항 - 예외 처리와 자원 누수 방지](https://wikidocs.net/191794)
+![System-out-println()의 개행 처리 흐름](https://github.com/user-attachments/assets/b96631e4-7227-4828-857a-16dd9d983b4e)
